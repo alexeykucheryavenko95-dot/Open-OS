@@ -1,73 +1,68 @@
 local component = require("component")
 local event     = require("event")
 
-local glasses = component.glasses
-if not glasses then
-  io.stderr:write("energy_daemon: glasses not found\n")
+local bridge = component.openperipheral_bridge
+if not bridge then
+  io.stderr:write("[ENERGY] Нет openperipheral_bridge.\n")
   return
 end
 
--- ВПИШИ адреса адаптеров, стоящих на IC2 energy counter:
--- reactorAdapter  — счётчик от реакторов
--- solarAdapter    — счётчик от панелей
-local cfg = {
-  reactorAdapter = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  solarAdapter   = "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
-}
+------------------------------------------------
+-- АДРЕСА СЧЁТЧИКОВ
+-- ТЕПЕРЬ ПРАВИЛЬНО:
+--   2742...  = РЕАКТОР
+--   c723...  = ПАНЕЛИ
+------------------------------------------------
+local REACTOR_ADDR = "2742795d-8024-4750-af42-02bf180f266c"
+local PANEL_ADDR   = "c7239038-119c-486d-9f7c-9d1b0d498409"
 
-local reactor, solar
+------------------------------------------------
+-- ЧТЕНИЕ getAverage() БЕЗ КЭШЕЙ
+------------------------------------------------
 
-if component.type(cfg.reactorAdapter) == "adapter" then
-  reactor = component.proxy(cfg.reactorAdapter)
-end
-if component.type(cfg.solarAdapter) == "adapter" then
-  solar = component.proxy(cfg.solarAdapter)
-end
-
-if not reactor or not solar then
-  io.stderr:write("energy_daemon: check adapter addresses in cfg\n")
-  return
-end
-
--- Пытаемся угадать метод счётчика
-local function readCounter(proxy)
-  if proxy.getEnergy then
-    return proxy.getEnergy()
-  elseif proxy.getEU then
-    return proxy.getEU()
-  elseif proxy.getOutput then
-    return proxy.getOutput()
-  elseif proxy.getValue then
-    return proxy.getValue()
+local function readEnergy(addr)
+  if not addr then return 0 end
+  local ok, val = pcall(component.invoke, addr, "getAverage")
+  if not ok then
+    return 0
   end
-  return 0
+  local n = tonumber(val)
+  if not n then
+    return 0
+  end
+  return math.floor(n)
 end
 
--- Три строки в очках
-local lineReactor = glasses.addTextLabel()
-lineReactor.setPosition(2, 60)
-lineReactor.setScale(1)
+------------------------------------------------
+-- РАЗМЕЩЕНИЕ НА HUD (ниже основного HUD)
+------------------------------------------------
 
-local lineSolar = glasses.addTextLabel()
-lineSolar.setPosition(2, 70)
-lineSolar.setScale(1)
+local x = 5
+local y = 240
 
-local lineTotal = glasses.addTextLabel()
-lineTotal.setPosition(2, 80)
-lineTotal.setScale(1)
+local txtReactor = bridge.addText(x, y,   "[EU] Реакторы: ---", 0x00FFFF); y = y + 10
+local txtPanels  = bridge.addText(x, y,   "[EU] Панели:   ---", 0x00FFFF); y = y + 10
+local txtTotal   = bridge.addText(x, y,   "[EU] Итого:    ---", 0x00FFFF)
 
-local function updateEnergy()
-  local r = 0
-  local s = 0
+bridge.sync()
 
-  pcall(function() r = readCounter(reactor) or 0 end)
-  pcall(function() s = readCounter(solar)   or 0 end)
+------------------------------------------------
+-- ОБНОВЛЕНИЕ КАЖДУЮ СЕКУНДУ
+------------------------------------------------
 
-  local total = r + s
+local function update()
+  local reactor = readEnergy(REACTOR_ADDR)
+  local panels  = readEnergy(PANEL_ADDR)
+  local total   = panels + reactor
 
-  lineReactor.setText(string.format("Reactors: %.0f EU/t", r))
-  lineSolar.setText(string.format("Solars:   %.0f EU/t", s))
-  lineTotal.setText(string.format("Total:    %.0f EU/t", total))
+  txtReactor.setText(string.format("[EU] Реакторы: %d EU/t", reactor))
+  txtPanels.setText (string.format("[EU] Панели:   %d EU/t", panels))
+  txtTotal.setText  (string.format("[EU] Итого:    %d EU/t", total))
+
+  bridge.sync()
 end
 
-event.timer(1, function() pcall(updateEnergy) end, math.huge)
+update()
+event.timer(1, update, math.huge)
+
+print("[ENERGY] Демон энергии запущен.")
