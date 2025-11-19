@@ -54,13 +54,20 @@ end
 local INTERVAL          = 1
 local MAX_PLAYERS_LINES = 5
 
+-- РЕСУРСЫ НА HUD
 local resources = {
   { label = "Iron",       name = "minecraft:iron_ingot",  damage = 0, color = 0xAAAAAA },
   { label = "Copper",     name = "IC2:itemIngot",         damage = 0, color = 0xFFA500 },
   { label = "LapisBlock", name = "minecraft:lapis_block", damage = 0, color = 0x3399FF },
+  { label = "Lapis",      name = "minecraft:dye",         damage = 4, color = 0x3399FF }, -- обычный лазурит
   { label = "U235tiny",   name = "IC2:itemUran235small",  damage = 0, color = 0x00FF00 },
   { label = "Materia",    name = "dwcity:Materia",        damage = 0, color = 0xFF00FF },
 }
+
+-- константы для перевода в блоки
+local LAPIS_BLOCK_NAME = "minecraft:lapis_block"
+local LAPIS_ITEM_NAME  = "minecraft:dye"
+local LAPIS_ITEM_DMG   = 4    -- лазурит в 1.7.10
 
 ------------------------------------------------
 -- ВСПОМОГАТЕЛЬНЫЕ
@@ -120,6 +127,7 @@ local hud = {
   playersHeader = nil,
   playersLines  = {},
   autoStatus    = nil,
+  lapisTotal    = nil, -- строка с общими блоками лазурита
   inited        = false,
 }
 
@@ -138,6 +146,10 @@ local function initHUD()
     hud.resTexts[i] = bridge.addText(xText, y, r.label .. ": ---", r.color)
     y = y + 14
   end
+
+  -- строка "перевод" в ОБЩИЕ БЛОКИ (всё в блоках из лазурита)
+  hud.lapisTotal = bridge.addText(xIcon, y, "LapisBlocksTotal: ---", 0x3399FF)
+  y = y + 14
 
   y = y + 6
   hud.playersHeader = bridge.addText(xIcon, y, "Дома: 0 чел.", 0xFFFF00)
@@ -164,11 +176,21 @@ local function updateHUD()
 
   local cfg = loadCfg()
 
-  -- ресурсы
+  -- ресурсы по списку
   for i, r in ipairs(resources) do
     local count = getItemCount(r.name, r.damage)
     hud.resTexts[i].setText(string.format("%s: %d", r.label, count or 0))
   end
+
+  -- общий лазурит → в блоки
+  local lapisBlocks = getItemCount(LAPIS_BLOCK_NAME, 0)
+  local lapisItems  = getItemCount(LAPIS_ITEM_NAME, LAPIS_ITEM_DMG)
+  local totalItems  = lapisItems + lapisBlocks * 9
+  local totalBlocks = math.floor(totalItems / 9)
+  local restItems   = totalItems % 9
+
+  -- покажем: X блоков + Y остаток
+  hud.lapisTotal.setText(string.format("LapisBlocksTotal: %dB + %d", totalBlocks, restItems))
 
   -- игроки
   local names = getPlayerNames()
