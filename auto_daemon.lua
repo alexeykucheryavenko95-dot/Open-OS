@@ -41,4 +41,4 @@ end
 -- каждые 5 секунд, демон не блокирует терминал
 event.timer(5, function() pcall(tick) end, math.huge)
 
-print("[ENERGY] Демон энергии запущен.")
+print("[AUTO] Демон переработки запущен.")
