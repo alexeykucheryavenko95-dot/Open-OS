@@ -1,0 +1,4 @@
+#!/bin/sh
+/home/auto_daemon.lua &
+/home/hud_daemon.lua &
+/home/energy_daemon.lua &
