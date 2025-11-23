@@ -39,31 +39,31 @@ local MAX_PLAYERS_LINES = 5
 -- константы для лазурита
 local LAPIS_BLOCK_NAME = "minecraft:lapis_block"
 local LAPIS_ITEM_NAME  = "minecraft:dye"
-local LAPIS_ITEM_DMG   = 4  -- лазурит 1.7.10
+local LAPIS_ITEM_DMG   = 4
 
 -- хладогент
 local COOLANT_NAME = "dwcity:Scattering_crystal"
 
 ------------------------------------------------
--- РЕСУРСЫ НА HUD
+-- РЕСУРСЫ НА HUD (на русском)
 ------------------------------------------------
 
 local resources = {
   -- железо
-  { label = "Iron",       id = "minecraft:iron_ingot",  dmg = 0, color = 0xAAAAAA },
-  { label = "IronBlock",  id = "minecraft:iron_block",  dmg = 0, color = 0xAAAAAA },
+  { label = "Железо",           id = "minecraft:iron_ingot",  dmg = 0, color = 0xAAAAAA },
+  { label = "Железные блоки",   id = "minecraft:iron_block",  dmg = 0, color = 0xAAAAAA },
 
-  -- медь (IC2:blockMetal meta 0 = медный блок)
-  { label = "Copper",       id = "IC2:itemIngot",   dmg = 0, color = 0xFFA500 },
-  { label = "CopperBlock",  id = "IC2:blockMetal",  dmg = 0, color = 0xFFA500 },
+  -- медь (IC2)
+  { label = "Медь",             id = "IC2:itemIngot",   dmg = 0, color = 0xFFA500 },
+  { label = "Медные блоки",     id = "IC2:blockMetal",  dmg = 0, color = 0xFFA500 },
 
   -- лазурит
-  { label = "LapisBlock", id = "minecraft:lapis_block", dmg = 0, color = 0x3399FF },
-  { label = "Lapis",      id = "minecraft:dye",         dmg = 4, color = 0x3399FF },
+  { label = "Блоки лазурита",   id = "minecraft:lapis_block", dmg = 0, color = 0x3399FF },
+  { label = "Лазурит",          id = "minecraft:dye",         dmg = 4, color = 0x3399FF },
 
   -- уран и материя
-  { label = "U235tiny",   id = "IC2:itemUran235small",  dmg = 0, color = 0x00FF00 },
-  { label = "Materia",    id = "dwcity:Materia",        dmg = 0, color = 0xFF00FF },
+  { label = "U-235 (крупицы)",  id = "IC2:itemUran235small",  dmg = 0, color = 0x00FF00 },
+  { label = "Материя",          id = "dwcity:Materia",        dmg = 0, color = 0xFF00FF },
 }
 
 ------------------------------------------------
@@ -86,28 +86,19 @@ local function getItemCount(name, dmg)
 end
 
 local function getPlayerNames()
-  if not sensorAddr then
-    return {}
-  end
+  if not sensorAddr then return {} end
 
   local ok, res = pcall(component.invoke, sensorAddr, "getPlayers")
-  if not ok or type(res) ~= "table" then
-    return {}
-  end
+  if not ok or type(res) ~= "table" then return {} end
 
   local names = {}
   for _, p in pairs(res) do
-    if type(p) == "table" and p.name then
-      names[#names+1] = tostring(p.name)
-    end
+    if p.name then names[#names+1] = tostring(p.name) end
   end
 
   local uniq, out = {}, {}
   for _, n in ipairs(names) do
-    if n ~= "" and not uniq[n] then
-      uniq[n] = true
-      out[#out+1] = n
-    end
+    if n ~= "" and not uniq[n] then uniq[n] = true; out[#out+1] = n end
   end
 
   table.sort(out)
@@ -143,19 +134,19 @@ local function initHUD()
 
   -- ресурсы
   for i, r in ipairs(resources) do
-    hud.icons[i] = addIcon(xIcon, y - 2, r.id, r.dmg or 0)
+    hud.icons[i] = addIcon(xIcon, y - 2, r.id, r.dmg)
     hud.texts[i] = bridge.addText(xText, y, r.label .. ": ---", r.color)
     y = y + 14
   end
 
-  -- общий лазурит (в блоках)
+  -- общий лазурит
   hud.lapisIcon = addIcon(xIcon, y - 2, LAPIS_BLOCK_NAME, 0)
-  hud.lapisText = bridge.addText(xText, y, "LapisBlocksTotal: ---", 0x3399FF)
+  hud.lapisText = bridge.addText(xText, y, "Всего лазурита: ---", 0x3399FF)
   y = y + 14
 
   -- хладогент
-  hud.coolIcon  = addIcon(xIcon, y - 2, COOLANT_NAME, 0)
-  hud.coolText  = bridge.addText(xText, y, "Хладогент: ---", 0x00FFFF)
+  hud.coolIcon = addIcon(xIcon, y - 2, COOLANT_NAME, 0)
+  hud.coolText = bridge.addText(xText, y, "Хладогент: ---", 0x00FFFF)
   y = y + 18
 
   -- игроки
@@ -184,14 +175,14 @@ local function updateHUD()
     hud.texts[i].setText(string.format("%s: %d", r.label, count))
   end
 
-  -- общий лазурит → в блоки
+  -- перерасчёт лазурита
   local lapisBlocks = getItemCount(LAPIS_BLOCK_NAME, 0)
   local lapisItems  = getItemCount(LAPIS_ITEM_NAME, LAPIS_ITEM_DMG)
   local totalItems  = lapisItems + lapisBlocks * 9
   local totalBlocks = math.floor(totalItems / 9)
   local restItems   = totalItems % 9
 
-  hud.lapisText.setText(string.format("LapisBlocksTotal: %dB + %d", totalBlocks, restItems))
+  hud.lapisText.setText(string.format("Всего лазурита: %dБ + %d", totalBlocks, restItems))
 
   -- хладогент
   local coolant = getItemCount(COOLANT_NAME, 0)
@@ -200,7 +191,6 @@ local function updateHUD()
   -- игроки
   local names = getPlayerNames()
   hud.playersHeader.setText("Дома: " .. #names .. " чел.")
-
   for i = 1, MAX_PLAYERS_LINES do
     hud.playersLines[i].setText(names[i] or "")
   end
