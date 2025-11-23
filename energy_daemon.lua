@@ -9,7 +9,6 @@ end
 
 ------------------------------------------------
 -- АДРЕСА СЧЁТЧИКОВ
--- ТЕПЕРЬ ПРАВИЛЬНО:
 --   2742...  = РЕАКТОР
 --   c723...  = ПАНЕЛИ
 ------------------------------------------------
@@ -17,9 +16,8 @@ local REACTOR_ADDR = "2742795d-8024-4750-af42-02bf180f266c"
 local PANEL_ADDR   = "c7239038-119c-486d-9f7c-9d1b0d498409"
 
 ------------------------------------------------
--- ЧТЕНИЕ getAverage() БЕЗ КЭШЕЙ
+-- ЧТЕНИЕ getAverage()
 ------------------------------------------------
-
 local function readEnergy(addr)
   if not addr then return 0 end
   local ok, val = pcall(component.invoke, addr, "getAverage")
@@ -34,11 +32,12 @@ local function readEnergy(addr)
 end
 
 ------------------------------------------------
--- РАЗМЕЩЕНИЕ НА HUD (ниже основного HUD)
+-- РАЗМЕЩЕНИЕ НА HUD
+-- ПРАВАЯ ЧАСТЬ ЭКРАНА, ПРИМЕРНО ПОД МИНИКАРТОЙ
 ------------------------------------------------
 
-local x = 5
-local y = 240
+local x = 840  -- сдвиг вправо; если надо ещё правее – увеличивай
+local y = 220  -- высота; выше = меньше число, ниже = больше
 
 local txtReactor = bridge.addText(x, y,   "[EU] Реакторы: ---", 0x00FFFF); y = y + 10
 local txtPanels  = bridge.addText(x, y,   "[EU] Панели:   ---", 0x00FFFF); y = y + 10
@@ -49,7 +48,6 @@ bridge.sync()
 ------------------------------------------------
 -- ОБНОВЛЕНИЕ КАЖДУЮ СЕКУНДУ
 ------------------------------------------------
-
 local function update()
   local reactor = readEnergy(REACTOR_ADDR)
   local panels  = readEnergy(PANEL_ADDR)
