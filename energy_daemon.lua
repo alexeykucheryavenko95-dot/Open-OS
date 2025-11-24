@@ -9,11 +9,9 @@ end
 
 ------------------------------------------------
 -- АДРЕСА СЧЁТЧИКОВ
---   2742...  = РЕАКТОР
---   c723...  = ПАНЕЛИ
 ------------------------------------------------
-local REACTOR_ADDR = "2742795d-8024-4750-af42-02bf180f266c"
-local PANEL_ADDR   = "c7239038-119c-486d-9f7c-9d1b0d498409"
+local REACTOR_ADDR = "2618285e-5cdd-4769-8d3a-4973b07eaea8"  -- реакторы
+local PANEL_ADDR   = "c7239038-119c-486d-9f7c-9d1b0d498409"  -- панели
 
 ------------------------------------------------
 -- ЧТЕНИЕ getAverage()
@@ -21,23 +19,16 @@ local PANEL_ADDR   = "c7239038-119c-486d-9f7c-9d1b0d498409"
 local function readEnergy(addr)
   if not addr then return 0 end
   local ok, val = pcall(component.invoke, addr, "getAverage")
-  if not ok then
-    return 0
-  end
+  if not ok then return 0 end
   local n = tonumber(val)
-  if not n then
-    return 0
-  end
-  return math.floor(n)
+  return n and math.floor(n) or 0
 end
 
 ------------------------------------------------
--- РАЗМЕЩЕНИЕ НА HUD
--- ПРАВАЯ ЧАСТЬ ЭКРАНА, ПРИМЕРНО ПОД МИНИКАРТОЙ
+-- HUD
 ------------------------------------------------
-
-local x = 840  -- сдвиг вправо; если надо ещё правее – увеличивай
-local y = 180  -- высота; выше = меньше число, ниже = больше
+local x = 820
+local y = 180
 
 local txtReactor = bridge.addText(x, y,   "[EU] Реакторы: ---", 0x00FFFF); y = y + 10
 local txtPanels  = bridge.addText(x, y,   "[EU] Панели:   ---", 0x00FFFF); y = y + 10
@@ -51,7 +42,7 @@ bridge.sync()
 local function update()
   local reactor = readEnergy(REACTOR_ADDR)
   local panels  = readEnergy(PANEL_ADDR)
-  local total   = panels + reactor
+  local total   = reactor + panels
 
   txtReactor.setText(string.format("[EU] Реакторы: %d EU/t", reactor))
   txtPanels.setText (string.format("[EU] Панели:   %d EU/t", panels))
