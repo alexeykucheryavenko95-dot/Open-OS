@@ -33,7 +33,7 @@ end
 -- НАСТРОЙКИ
 ------------------------------------------------
 
-local INTERVAL          = 1
+local INTERVAL          = 3
 local MAX_PLAYERS_LINES = 5
 
 -- константы для лазурита
