@@ -36,13 +36,14 @@ end
 local INTERVAL          = 3
 local MAX_PLAYERS_LINES = 5
 
--- константы для лазурита
+-- лазурит
 local LAPIS_BLOCK_NAME = "minecraft:lapis_block"
 local LAPIS_ITEM_NAME  = "minecraft:dye"
 local LAPIS_ITEM_DMG   = 4
 
--- хладогент
-local COOLANT_NAME = "dwcity:Scattering_crystal"
+-- хладогенты
+local COOLANT1_NAME = "dwcity:Scattering_crystal" -- старый
+local COOLANT2_NAME = "dwcity:Dominant_crystal"   -- дракониевый
 
 ------------------------------------------------
 -- РЕСУРСЫ НА HUD (на русском)
@@ -75,7 +76,12 @@ local function addIcon(x, y, name, meta)
 end
 
 local function getItemCount(name, dmg)
-  local list = me.getItemsInNetwork({ name = name, damage = dmg })
+  local filter = { name = name }
+  if dmg ~= nil then
+    filter.damage = dmg
+  end
+
+  local list = me.getItemsInNetwork(filter)
   local total = 0
   if list then
     for _, st in ipairs(list) do
@@ -98,11 +104,34 @@ local function getPlayerNames()
 
   local uniq, out = {}, {}
   for _, n in ipairs(names) do
-    if n ~= "" and not uniq[n] then uniq[n] = true; out[#out+1] = n end
+    if n ~= "" and not uniq[n] then
+      uniq[n] = true
+      out[#out+1] = n
+    end
   end
 
   table.sort(out)
   return out
+end
+
+-- считаем оба вида хладогента отдельно одним проходом
+local function getCoolantCounts()
+  local list = me.getItemsInNetwork()
+  local c1, c2 = 0, 0
+
+  if not list then return 0, 0 end
+
+  for _, st in ipairs(list) do
+    if st and st.name and st.size then
+      if st.name == COOLANT1_NAME then
+        c1 = c1 + st.size
+      elseif st.name == COOLANT2_NAME then
+        c2 = c2 + st.size
+      end
+    end
+  end
+
+  return c1, c2
 end
 
 ------------------------------------------------
@@ -114,8 +143,10 @@ local hud = {
   texts         = {},
   lapisIcon     = nil,
   lapisText     = nil,
-  coolIcon      = nil,
-  coolText      = nil,
+  coolIcon1     = nil,
+  coolText1     = nil,
+  coolIcon2     = nil,
+  coolText2     = nil,
   playersHeader = nil,
   playersLines  = {},
   inited        = false,
@@ -144,9 +175,14 @@ local function initHUD()
   hud.lapisText = bridge.addText(xText, y, "Всего лазурита: ---", 0x3399FF)
   y = y + 14
 
-  -- хладогент
-  hud.coolIcon = addIcon(xIcon, y - 2, COOLANT_NAME, 0)
-  hud.coolText = bridge.addText(xText, y, "Хладогент: ---", 0x00FFFF)
+  -- хладогент 1 (старый)
+  hud.coolIcon1 = addIcon(xIcon, y - 2, COOLANT1_NAME, 0)
+  hud.coolText1 = bridge.addText(xText, y, "Хладогент: ---", 0x00FFFF)
+  y = y + 14
+
+  -- хладогент 2 (дракониевый)
+  hud.coolIcon2 = addIcon(xIcon, y - 2, COOLANT2_NAME, 0)
+  hud.coolText2 = bridge.addText(xText, y, "Дракониевый хладогент: ---", 0xFF00FF)
   y = y + 18
 
   -- игроки
@@ -184,9 +220,10 @@ local function updateHUD()
 
   hud.lapisText.setText(string.format("Всего лазурита: %dБ + %d", totalBlocks, restItems))
 
-  -- хладогент
-  local coolant = getItemCount(COOLANT_NAME, 0)
-  hud.coolText.setText("Хладогент: " .. coolant)
+  -- хладогенты по отдельности
+  local c1, c2 = getCoolantCounts()
+  hud.coolText1.setText("Хладогент: " .. c1)
+  hud.coolText2.setText("Дракониевый хладогент: " .. c2)
 
   -- игроки
   local names = getPlayerNames()
