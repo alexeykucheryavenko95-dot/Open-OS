@@ -1,48 +1,69 @@
-local c  = require("component")
-local fs = require("filesystem")
-local keyboard = require("keyboard")
+local component = require("component")
+local event     = require("event")
+local fs        = require("filesystem")
 
-local bridge = c.openperipheral_bridge
+------------------------------------------------
+-- OPENPERIPHERAL BRIDGE
+------------------------------------------------
+local bridge = component.openperipheral_bridge
 if not bridge then
-  io.stderr:write("[TPS_HUD] Нет openperipheral_bridge.\n")
+  io.stderr:write("[TPS_DAEMON] Нет openperipheral_bridge.\n")
   return
 end
 
--- === ПОЗИЦИЯ ПОД ЭНЕРГИЕЙ ===
+------------------------------------------------
+-- ПОЗИЦИЯ (ПОД ЭНЕРГИЕЙ)
+------------------------------------------------
 local X_LABEL = 820
 local Y_LABEL = 210
 local X_VALUE = 920
 local Y_VALUE = 210
 
-local TC, RO, RN, RD = 2, 0, 0, 0
-local TPS = 0
+------------------------------------------------
+-- НАСТРОЙКИ
+------------------------------------------------
+local INTERVAL = 2   -- сек между замерами
+local FILE = "/tmp/TF"
 
+------------------------------------------------
+-- ВРЕМЯ (как в оригинале)
+------------------------------------------------
 local function time()
-  local f = io.open("/tmp/TF", "w")
+  local f = io.open(FILE, "w")
   f:write("t")
   f:close()
-  return fs.lastModified("/tmp/TF")
+  return fs.lastModified(FILE)
 end
 
--- HUD строки
+------------------------------------------------
+-- HUD ЭЛЕМЕНТЫ
+------------------------------------------------
 local label = bridge.addText(X_LABEL, Y_LABEL, "TPS:")
 label.setColor(0x9AA3FF)
 
 local value = bridge.addText(X_VALUE, Y_VALUE, "---")
 value.setColor(0xFFFFFF)
 
-while true do
-  RO = time()
-  os.sleep(TC)
-  RN = time()
+------------------------------------------------
+-- СОСТОЯНИЕ
+------------------------------------------------
+local lastTime = time()
 
-  RD = RN - RO
-  if RD <= 0 then RD = 1 end
+------------------------------------------------
+-- ОСНОВНОЙ ТАЙМЕР
+------------------------------------------------
+event.timer(INTERVAL, function()
+  local now = time()
+  local diff = now - lastTime
+  lastTime = now
 
-  TPS = 20000 * TC / RD
-  local sTPS = string.sub(tostring(TPS), 1, 5)
+  if diff <= 0 then diff = 1 end
+
+  local tps = 20000 * INTERVAL / diff
+  local sTPS = string.sub(tostring(tps), 1, 5)
   local nTPS = tonumber(sTPS) or 0
 
+  -- цвет
   if nTPS <= 10 then
     value.setColor(0xCC4C4C)   -- красный
   elseif nTPS <= 15 then
@@ -52,10 +73,8 @@ while true do
   end
 
   value.setText(sTPS)
+end, math.huge)
 
-  if keyboard.isControlDown() and keyboard.isKeyDown(keyboard.keys.w) then
-    value.setText("exit")
-    value.setColor(0xFFFFFF)
-    break
-  end
-end
+------------------------------------------------
+-- ДЕМОН ЖИВЁТ, ТЕРМИНАЛ СВОБОДЕН
+------------------------------------------------
